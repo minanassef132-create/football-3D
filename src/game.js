@@ -1,10 +1,4 @@
-from pathlib import Path
-import zipfile
-
-outdir = Path("/mnt/data/football_smart_ai_update")
-(outdir / "src").mkdir(parents=True, exist_ok=True)
-
-code = r"""const loading = document.querySelector('#loading');
+const loading = document.querySelector('#loading');
 function showError(error) {
   console.error(error);
   loading.style.display = 'grid';
@@ -342,30 +336,4 @@ async function startGame() {
   }
 }
 startGame();
-"""
-(outdir / "src" / "game.js").write_text(code, encoding="utf-8")
-(outdir / "تعليمات_التركيب.txt").write_text(
-"""تحديث Smart Tactical AI للعبة Football 3D
-
-يحتوي الملف على:
-- تمرير تلقائي لأفضل زميل متاح.
-- تمريرة بينية إلى المساحة أمام الزميل.
-- تسديد موجه نحو المرمى.
-- زر بينية جديد يضاف تلقائيًا داخل اللعبة دون تعديل index.html.
-
-التركيب:
-1) فك ضغط الملف.
-2) افتح GitHub ثم مستودع football-3D ثم مجلد src.
-3) افتح game.js واضغط القلم Edit.
-4) استبدل الكود القديم بالكامل بمحتوى src/game.js من هذا التحديث.
-5) اضغط Commit changes.
-6) افتح اللعبة واعمل تحديثًا للصفحة.
-
-استبدل game.js فقط. لا تغيّر index.html أو style.css أو sw.js.
-""", encoding="utf-8")
-zip_path = Path("/mnt/data/football_smart_tactical_ai.zip")
-with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-    z.write(outdir / "src" / "game.js", "src/game.js")
-    z.write(outdir / "تعليمات_التركيب.txt", "تعليمات_التركيب.txt")
-print(f"تم إنشاء التحديث: {zip_path} ({zip_path.stat().st_size} bytes)")
-        
+      

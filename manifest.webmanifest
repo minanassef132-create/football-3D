@@ -1,0 +1,11 @@
+{
+  "name": "Football 3D Prototype",
+  "short_name": "Football 3D",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#071b14",
+  "theme_color": "#071b14",
+  "lang": "ar",
+  "dir": "rtl"
+}

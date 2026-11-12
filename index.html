@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#071b14">
+  <title>Football 3D — Prototype</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="game"></div>
+  <div class="hud">
+    <div class="score"><span>الفريق الأخضر</span><b id="score">0 - 0</b><span>الفريق الأبيض</span></div>
+    <div class="hint" id="hint">اقترب من الكرة ثم استخدم التسديد أو التمرير</div>
+    <div class="actions">
+      <button id="pass">تمرير</button>
+      <button id="shoot" class="shoot">تسديد</button>
+      <button id="switch">تبديل اللاعب</button>
+    </div>
+    <div class="stick-area" id="stickArea"><div class="stick" id="stick"></div></div>
+    <div class="top-actions">
+      <button id="reset">إعادة المباراة</button>
+      <button id="pause">إيقاف</button>
+    </div>
+  </div>
+  <div class="loading" id="loading">جارٍ تجهيز الملعب...</div>
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>

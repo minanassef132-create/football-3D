@@ -45,15 +45,16 @@ async function startGame() {
     const user=makePlayer(green,0,12);players.push(user);
     const ball=new THREE.Mesh(new THREE.SphereGeometry(.38,20,16),white);ball.position.set(0,.4,10.8);scene.add(ball);
     const ballVel=new THREE.Vector3(),move=new THREE.Vector2(),forward=new THREE.Vector3(0,0,-1);
-    let paused=false,seconds=0,scoreA=0,scoreB=0,hasBall=true;
+    let paused=false,seconds=0,scoreA=0,scoreB=0,hasBall=true,kickLock=0;
     const score=document.querySelector('#score'),clock=document.querySelector('#clock');
     function ballNear(){return Math.hypot(ball.position.x-user.position.x,ball.position.z-user.position.z)<1.9;}
     function kick(power){
       if(!hasBall && !ballNear()) return;
       hasBall=false;
+      kickLock=0.7;
       const dir=forward.clone().normalize();
-      ball.position.set(user.position.x+dir.x*.95,.42,user.position.z+dir.z*.95);
-      ballVel.set(dir.x*power*1.65,power*.19,dir.z*power*1.65);
+      ball.position.set(user.position.x+dir.x*1.2,.42,user.position.z+dir.z*1.2);
+      ballVel.set(dir.x*power*2.5,power*.25,dir.z*power*2.5);
     }
     document.querySelector('#shoot').onclick=()=>kick(1.35);
     document.querySelector('#pass').onclick=()=>kick(.72);
@@ -71,7 +72,8 @@ async function startGame() {
       if(!paused){seconds+=dt;clock.textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(Math.floor(seconds%60)).padStart(2,'0');
         const moving=move.length()>.08;
         if(moving){const dir=new THREE.Vector3(move.x,0,-move.y).normalize();forward.copy(dir);user.rotation.y=Math.atan2(-dir.x,-dir.z);user.position.x=THREE.MathUtils.clamp(user.position.x+dir.x*dt*7,-16,16);user.position.z=THREE.MathUtils.clamp(user.position.z+dir.z*dt*7,-25,25);}
-        if(hasBall || ballNear()){
+        kickLock=Math.max(0,kickLock-dt);
+        if(hasBall || (kickLock<=0 && ballNear() && ballVel.length()<0.12)){
           hasBall=true;ballVel.set(0,0,0);
           const target=new THREE.Vector3(user.position.x+forward.x*.9,.4,user.position.z+forward.z*.9);
           ball.position.lerp(target,moving?Math.min(1,dt*12):Math.min(1,dt*8));
@@ -83,7 +85,7 @@ async function startGame() {
         }
         for(const p of players){if(p===user)continue;const dx=ball.position.x-p.position.x,dz=ball.position.z-p.position.z,d=Math.hypot(dx,dz);if(d>1.3&&d<10){p.position.x+=dx/d*dt*.8;p.position.z+=dz/d*dt*.8;}if(d<.85&&Math.abs(ballVel.x)+Math.abs(ballVel.z)>.1){hasBall=false;}}
         if(Math.abs(ball.position.x)>16)ballVel.x*=-.7;
-        if(Math.abs(ball.position.z)>26){if(Math.abs(ball.position.x)<3.5){if(ball.position.z<0)scoreA++;else scoreB++;score.textContent='الأخضر '+scoreA+' - '+scoreB+' الأزرق';ball.position.set(0,.4,0);ballVel.set(0,0,0);hasBall=false;}else ballVel.z*=-.7;}
+        if(Math.abs(ball.position.z)>26){if(Math.abs(ball.position.x)<3.5){if(ball.position.z<0)scoreA++;else scoreB++;score.textContent='الأخضر '+scoreA+' - '+scoreB+' الأزرق';ball.position.set(0,.4,0);ballVel.set(0,0,0);hasBall=false;kickLock=0;}else ballVel.z*=-.7;}
       }
       camera.position.lerp(new THREE.Vector3(user.position.x*.35,19,user.position.z+21),.06);camera.lookAt(user.position.x*.35,0,user.position.z-3);renderer.render(scene,camera);
       if(loading.style.display!=='none')loading.style.display='none';

@@ -15,31 +15,32 @@ async function startGame() {
       "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
     );
 
+    // إعداد المشهد
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x75b8e8);
+    scene.background = new THREE.Color(0x80c5ed);
 
     const camera = new THREE.PerspectiveCamera(
       55, innerWidth / innerHeight, 0.1, 300
     );
-    camera.position.set(0, 19, 25);
+    camera.position.set(0, 22, 28);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: "high-performance"
     });
     renderer.setSize(innerWidth, innerHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x355533, 2));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x34552e, 2));
 
     const sun = new THREE.DirectionalLight(0xffffff, 2);
-    sun.position.set(-8, 20, 12);
+    sun.position.set(-10, 25, 10);
     sun.castShadow = true;
     scene.add(sun);
 
-    // أرضية الملعب
+    // الملعب
     const field = new THREE.Mesh(
       new THREE.PlaneGeometry(34, 54),
       new THREE.MeshStandardMaterial({ color: 0x238b42 })
@@ -48,14 +49,13 @@ async function startGame() {
     field.receiveShadow = true;
     scene.add(field);
 
-    // خطوط الملعب
     function line(x1, z1, x2, z2) {
-      const points = [
-        new THREE.Vector3(x1, 0.035, z1),
-        new THREE.Vector3(x2, 0.035, z2)
-      ];
+      const geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(x1, 0.04, z1),
+        new THREE.Vector3(x2, 0.04, z2)
+      ]);
       scene.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(points),
+        geometry,
         new THREE.LineBasicMaterial({ color: 0xffffff })
       ));
     }
@@ -66,34 +66,38 @@ async function startGame() {
     line(17, -27, 17, 27);
     line(-17, 0, 17, 0);
 
-    const circle = new THREE.Mesh(
+    const centerCircle = new THREE.Mesh(
       new THREE.RingGeometry(4.8, 4.95, 64),
       new THREE.MeshBasicMaterial({
         color: 0xffffff,
         side: THREE.DoubleSide
       })
     );
-    circle.rotation.x = -Math.PI / 2;
-    circle.position.y = 0.04;
-    scene.add(circle);
+    centerCircle.rotation.x = -Math.PI / 2;
+    centerCircle.position.y = 0.045;
+    scene.add(centerCircle);
 
-    function boxLine(x, z, w, h) {
-      line(x, z, x + w, z);
-      line(x + w, z, x + w, z + h);
-      line(x + w, z + h, x, z + h);
-      line(x, z + h, x, z);
+    function penaltyBox(z, direction) {
+      const a = z;
+      const b = z + direction * 7;
+      line(-9, a, 9, a);
+      line(-9, a, -9, b);
+      line(9, a, 9, b);
+      line(-9, b, 9, b);
     }
 
-    boxLine(-9, -27, 18, 7);
-    boxLine(-9, 20, 18, 7);
+    penaltyBox(-27, 1);
+    penaltyBox(27, -1);
 
-    // المرميان
-    function goal(z) {
-      const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    // المرمى
+    function createGoal(z) {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff
+      });
 
       for (const x of [-3.6, 3.6]) {
         const post = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.09, 0.09, 2.5, 8),
+          new THREE.CylinderGeometry(0.1, 0.1, 2.5, 10),
           material
         );
         post.position.set(x, 1.25, z);
@@ -101,23 +105,35 @@ async function startGame() {
       }
 
       const bar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.09, 7.2, 8),
+        new THREE.CylinderGeometry(0.1, 0.1, 7.2, 10),
         material
       );
       bar.rotation.z = Math.PI / 2;
       bar.position.set(0, 2.5, z);
       scene.add(bar);
+
+      const net = new THREE.Mesh(
+        new THREE.BoxGeometry(7.2, 2.5, 1.4),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.25
+        })
+      );
+      net.position.set(0, 1.25, z + (z < 0 ? -0.7 : 0.7));
+      scene.add(net);
     }
 
-    goal(-27);
-    goal(27);
+    createGoal(-27);
+    createGoal(27);
 
-    // إنشاء اللاعبين
+    // اللاعبين
     function makePlayer(color, x, z) {
       const group = new THREE.Group();
 
       const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.48, 0.58, 1.25, 12),
+        new THREE.CylinderGeometry(0.42, 0.55, 1.25, 12),
         new THREE.MeshStandardMaterial({ color })
       );
       body.position.y = 0.85;
@@ -125,11 +141,22 @@ async function startGame() {
       group.add(body);
 
       const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.32, 12, 12),
-        new THREE.MeshStandardMaterial({ color: 0xf1c49b })
+        new THREE.SphereGeometry(0.3, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf0c49c })
       );
       head.position.y = 1.65;
       group.add(head);
+
+      const marker = new THREE.Mesh(
+        new THREE.RingGeometry(0.65, 0.75, 24),
+        new THREE.MeshBasicMaterial({
+          color: color,
+          side: THREE.DoubleSide
+        })
+      );
+      marker.rotation.x = -Math.PI / 2;
+      marker.position.y = 0.06;
+      group.add(marker);
 
       group.position.set(x, 0, z);
       scene.add(group);
@@ -156,7 +183,10 @@ async function startGame() {
     // الكرة
     const ball = new THREE.Mesh(
       new THREE.SphereGeometry(0.34, 20, 20),
-      new THREE.MeshStandardMaterial({ color: 0xffffff })
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.55
+      })
     );
     ball.position.set(0, 0.35, 9);
     ball.castShadow = true;
@@ -169,6 +199,9 @@ async function startGame() {
     let kickLock = 0;
     let paused = false;
     let elapsed = 0;
+    let scoreHome = 0;
+    let scoreAway = 0;
+    let goalCooldown = 0;
 
     // عصا التحكم
     const stickArea = document.querySelector("#stickArea");
@@ -179,92 +212,91 @@ async function startGame() {
     let moving = false;
 
     function joystick(e) {
+      if (!stickArea || !stick) return;
+
       const r = stickArea.getBoundingClientRect();
       const dx = e.clientX - (r.left + r.width / 2);
       const dy = e.clientY - (r.top + r.height / 2);
       const max = 43;
       const len = Math.hypot(dx, dy) || 1;
+      const scale = Math.min(len, max) / max;
 
-      joyX = dx / Math.max(len, max) * Math.min(len, max) / max;
-      joyY = dy / Math.max(len, max) * Math.min(len, max) / max;
+      joyX = dx / len * scale;
+      joyY = dy / len * scale;
 
       stick.style.left = (33 + joyX * 43) + "px";
       stick.style.top = (33 + joyY * 43) + "px";
       moving = true;
     }
 
-    stickArea.addEventListener("pointerdown", e => {
-      stickArea.setPointerCapture(e.pointerId);
-      joystick(e);
-    });
-
-    stickArea.addEventListener("pointermove", e => {
-      if (moving) joystick(e);
-    });
-
     function stopJoy() {
       moving = false;
       joyX = 0;
       joyY = 0;
-      stick.style.left = "33px";
-      stick.style.top = "33px";
+
+      if (stick) {
+        stick.style.left = "33px";
+        stick.style.top = "33px";
+      }
     }
 
-    stickArea.addEventListener("pointerup", stopJoy);
-    stickArea.addEventListener("pointercancel", stopJoy);
+    if (stickArea) {
+      stickArea.addEventListener("pointerdown", e => {
+        stickArea.setPointerCapture(e.pointerId);
+        joystick(e);
+      });
+      stickArea.addEventListener("pointermove", e => {
+        if (moving) joystick(e);
+      });
+      stickArea.addEventListener("pointerup", stopJoy);
+      stickArea.addEventListener("pointercancel", stopJoy);
+    }
 
     function clampPlayer(p) {
       p.position.x = THREE.MathUtils.clamp(p.position.x, -15.5, 15.5);
       p.position.z = THREE.MathUtils.clamp(p.position.z, -25.5, 25.5);
     }
 
-    // الاستحواذ على الكرة
+    // استرجاع الكرة
     function takeBall() {
       hasBall = true;
       kickLock = 0;
       ballVelocity.set(0, 0, 0);
+
       ball.position.set(
-        player.position.x + direction.x * 0.9,
+        player.position.x + direction.x * 1,
         0.35,
-        player.position.z + direction.z * 0.9
+        player.position.z + direction.z * 1
       );
     }
 
-    // زر استرجاع الكرة
-    const recoverButton = document.createElement("button");
-    recoverButton.textContent = "استرجاع الكرة";
-    recoverButton.style.position = "fixed";
-    recoverButton.style.left = "50%";
-    recoverButton.style.bottom = "18px";
-    recoverButton.style.transform = "translateX(-50%)";
-    recoverButton.style.zIndex = "10";
-    recoverButton.style.background = "#176bce";
-    recoverButton.style.color = "white";
-    recoverButton.style.border = "0";
-    recoverButton.style.borderRadius = "12px";
-    recoverButton.style.padding = "12px 18px";
-    recoverButton.style.fontWeight = "bold";
-    document.body.appendChild(recoverButton);
-    recoverButton.onclick = takeBall;
-
-    // اختيار أقرب زميل
+    // اختيار الزميل الأنسب
     function nearestTeammate() {
-      return teammates
-        .map(p => ({
-          p,
-          score: p.position.distanceTo(player.position) +
-            Math.max(0, p.position.z - player.position.z) * 0.5
-        }))
-        .sort((a, b) => a.score - b.score)[0].p;
+      let best = teammates[0];
+      let bestScore = Infinity;
+
+      for (const mate of teammates) {
+        const distance = mate.position.distanceTo(player.position);
+        const forwardPenalty =
+          mate.position.z > player.position.z ? 3 : 0;
+        const score = distance + forwardPenalty;
+
+        if (score < bestScore) {
+          bestScore = score;
+          best = mate;
+        }
+      }
+
+      return best;
     }
 
-    // التمرير والتسديد
+    // تنفيذ الركلة
     function kick(target, power, lift) {
       if (!hasBall || kickLock > 0) return;
 
       ball.position.set(
         player.position.x + direction.x * 1.1,
-        0.36,
+        0.38,
         player.position.z + direction.z * 1.1
       );
 
@@ -273,14 +305,14 @@ async function startGame() {
       ballVelocity.y = lift;
 
       hasBall = false;
-      kickLock = 0.8;
+      kickLock = 0.65;
     }
 
     function passBall() {
       const mate = nearestTeammate();
       const target = mate.position.clone();
       target.y = 0.35;
-      kick(target, 9.5, 0.12);
+      kick(target, 9.5, 0.1);
     }
 
     function throughBall() {
@@ -291,7 +323,7 @@ async function startGame() {
       target.z = Math.max(-25, target.z);
       target.x = THREE.MathUtils.clamp(target.x, -14, 14);
 
-      kick(target, 12, 0.3);
+      kick(target, 11.5, 0.25);
     }
 
     function shootBall() {
@@ -300,38 +332,88 @@ async function startGame() {
         0.5,
         -29
       );
-      kick(target, 17, 0.65);
+      kick(target, 16, 0.55);
     }
 
-    document.querySelector("#pass").onclick = passBall;
-    document.querySelector("#shoot").onclick = shootBall;
+    if (document.querySelector("#pass")) {
+      document.querySelector("#pass").onclick = passBall;
+    }
+    if (document.querySelector("#shoot")) {
+      document.querySelector("#shoot").onclick = shootBall;
+    }
 
-    const through = document.createElement("button");
-    through.textContent = "بينية";
-    through.style.background = "#ef8b16";
-    through.style.position = "fixed";
-    through.style.right = "20px";
-    through.style.bottom = "142px";
-    through.style.zIndex = "5";
-    document.body.appendChild(through);
-    through.onclick = throughBall;
+    // أزرار إضافية
+    function addButton(id, text, right, bottom, color, action) {
+      const button = document.createElement("button");
+      button.id = id;
+      button.textContent = text;
+      Object.assign(button.style, {
+        position: "fixed",
+        right,
+        bottom,
+        zIndex: "20",
+        background: color,
+        color: "white",
+        border: "0",
+        borderRadius: "12px",
+        padding: "11px 14px",
+        fontWeight: "bold",
+        fontSize: "14px"
+      });
+      document.body.appendChild(button);
+      button.onclick = action;
+      return button;
+    }
 
-    document.querySelector("#pause").onclick = () => {
-      paused = !paused;
-      document.querySelector("#pause").textContent =
-        paused ? "استكمال" : "إيقاف";
-    };
+    addButton(
+      "throughButton", "بينية", "20px", "142px", "#ef8b16", throughBall
+    );
 
-    document.querySelector("#switch").onclick = () => {
-      const mate = nearestTeammate();
-      const old = player.position.clone();
-      player.position.copy(mate.position);
-      mate.position.copy(old);
-      clampPlayer(player);
-      clampPlayer(mate);
-    };
+    addButton(
+      "recoverButton", "استرجاع الكرة", "50%", "18px", "#176bce",
+      takeBall
+    ).style.transform = "translateX(50%)";
 
-    // حلقة تشغيل اللعبة
+    const pauseButton = document.querySelector("#pause");
+    if (pauseButton) {
+      pauseButton.onclick = () => {
+        paused = !paused;
+        pauseButton.textContent = paused ? "استكمال" : "إيقاف";
+      };
+    }
+
+    const switchButton = document.querySelector("#switch");
+    if (switchButton) {
+      switchButton.onclick = () => {
+        const mate = nearestTeammate();
+        const old = player.position.clone();
+        player.position.copy(mate.position);
+        mate.position.copy(old);
+        clampPlayer(player);
+        clampPlayer(mate);
+      };
+    }
+
+    // لوحة النتيجة
+    const scoreBoard = document.createElement("div");
+    Object.assign(scoreBoard.style, {
+      position: "fixed",
+      top: "12px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: "10",
+      background: "rgba(0,0,0,0.7)",
+      color: "white",
+      padding: "9px 18px",
+      borderRadius: "12px",
+      fontWeight: "bold",
+      fontSize: "17px",
+      direction: "rtl"
+    });
+    scoreBoard.textContent = "فريقك 0 - 0 الخصم";
+    document.body.appendChild(scoreBoard);
+
+    // ساعة المباراة
     const clock = new THREE.Clock();
 
     function animate() {
@@ -341,11 +423,12 @@ async function startGame() {
         const dt = Math.min(clock.getDelta(), 0.04);
         elapsed += dt;
         kickLock = Math.max(0, kickLock - dt);
+        goalCooldown = Math.max(0, goalCooldown - dt);
 
         // حركة اللاعب
         if (moving) {
-          player.position.x += joyX * 9 * dt;
-          player.position.z += joyY * 9 * dt;
+          player.position.x += joyX * 8 * dt;
+          player.position.z += joyY * 8 * dt;
 
           if (Math.abs(joyX) + Math.abs(joyY) > 0.1) {
             direction.set(joyX, 0, joyY).normalize();
@@ -353,96 +436,109 @@ async function startGame() {
           clampPlayer(player);
         }
 
-        // حركة الكرة
+        // الكرة مع اللاعب أو في الملعب
         if (hasBall) {
           const target = player.position.clone().add(
             direction.clone().multiplyScalar(1)
           );
           target.y = 0.35;
-          ball.position.lerp(target, 0.25);
+          ball.position.lerp(target, 0.3);
         } else {
           ball.position.addScaledVector(ballVelocity, dt);
-
-          // الجاذبية وارتداد الكرة
           ballVelocity.y -= 9.8 * dt;
 
           if (ball.position.y < 0.35) {
             ball.position.y = 0.35;
-            if (Math.abs(ballVelocity.y) > 0.35) {
-              ballVelocity.y *= -0.25;
+            if (Math.abs(ballVelocity.y) > 0.5) {
+              ballVelocity.y *= -0.22;
             } else {
               ballVelocity.y = 0;
             }
           }
 
-          // احتكاك الأرض
           const friction = ball.position.y <= 0.351 ? 0.965 : 0.995;
           ballVelocity.x *= Math.pow(friction, dt * 60);
           ballVelocity.z *= Math.pow(friction, dt * 60);
 
-          // حدود الملعب: ارتداد الكرة للداخل
-          const edge = 16.3;
-          const endLine = 26.3;
-          const bounce = 0.55;
+          // إصلاح خروج الكرة: ترجع للاعب فورًا
+          const outsideField =
+            Math.abs(ball.position.x) > 16.2 ||
+            Math.abs(ball.position.z) > 26.2;
 
-          if (ball.position.x > edge) {
-            ball.position.x = edge;
-            ballVelocity.x = -Math.abs(ballVelocity.x) * bounce;
+          const invalidBall =
+            !Number.isFinite(ball.position.x) ||
+            !Number.isFinite(ball.position.y) ||
+            !Number.isFinite(ball.position.z) ||
+            ball.position.y > 8;
+
+          if (outsideField || invalidBall) {
+            takeBall();
           }
 
-          if (ball.position.x < -edge) {
-            ball.position.x = -edge;
-            ballVelocity.x = Math.abs(ballVelocity.x) * bounce;
-          }
-
-          if (ball.position.z > endLine) {
-            ball.position.z = endLine;
-            ballVelocity.z = -Math.abs(ballVelocity.z) * bounce;
-          }
-
-          if (ball.position.z < -endLine) {
-            ball.position.z = -endLine;
-            ballVelocity.z = Math.abs(ballVelocity.z) * bounce;
-          }
-
-          // استعادة الكرة عند الاقتراب منها
+          // الاستحواذ عند الاقتراب من الكرة
           if (
+            !hasBall &&
             kickLock <= 0 &&
             ball.position.distanceTo(player.position) < 1.8
           ) {
             takeBall();
           }
 
-          // حماية إضافية لو حصل خلل في موقع الكرة
+          // هدف
           if (
-            !Number.isFinite(ball.position.x) ||
-            !Number.isFinite(ball.position.y) ||
-            !Number.isFinite(ball.position.z) ||
-            ball.position.y > 12
+            goalCooldown <= 0 &&
+            Math.abs(ball.position.z) > 26 &&
+            Math.abs(ball.position.x) < 3.7
           ) {
+            if (ball.position.z < 0) scoreHome++;
+            else scoreAway++;
+
+            scoreBoard.textContent =
+              "فريقك " + scoreHome + " - " + scoreAway + " الخصم";
+
+            goalCooldown = 2;
             takeBall();
           }
         }
 
-        // تحرك المنافسين
+        // حركة المنافسين نحو الكرة
         for (const enemy of opponents) {
           const d = ball.position.clone().sub(enemy.position);
           d.y = 0;
 
           if (d.length() > 1.5) {
-            enemy.position.add(d.normalize().multiplyScalar(2 * dt));
+            enemy.position.add(
+              d.normalize().multiplyScalar(1.8 * dt)
+            );
           }
           clampPlayer(enemy);
         }
 
-        // الكاميرا تتبع اللاعب
+        // حركة الزملاء
+        for (const mate of teammates) {
+          if (hasBall) {
+            const target = player.position.clone();
+            target.z -= 4;
+            const d = target.sub(mate.position);
+            d.y = 0;
+
+            if (d.length() > 5) {
+              mate.position.add(
+                d.normalize().multiplyScalar(1.2 * dt)
+              );
+            }
+          }
+          clampPlayer(mate);
+        }
+
+        // كاميرا تتبع اللاعب
         const camTarget = new THREE.Vector3(
           player.position.x * 0.55,
-          19,
-          player.position.z + 17
+          20,
+          player.position.z + 18
         );
 
-        camera.position.lerp(camTarget, 0.045);
+        camera.position.lerp(camTarget, 0.06);
         camera.lookAt(
           player.position.x * 0.35,
           0,
@@ -477,4 +573,4 @@ async function startGame() {
 }
 
 startGame();
-        
+      

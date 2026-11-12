@@ -1,4 +1,10 @@
-const loading = document.querySelector('#loading');
+from pathlib import Path
+import zipfile
+
+base = Path("/mnt/data/football_ball_control_fixed")
+(base / "src").mkdir(parents=True, exist_ok=True)
+
+game_js = r"""const loading = document.querySelector('#loading');
 function showError(error) {
   console.error(error);
   loading.style.display = 'grid';
@@ -95,3 +101,28 @@ async function startGame() {
   } catch(error){showError(error);}
 }
 startGame();
+"""
+(base / "src" / "game.js").write_text(game_js, encoding="utf-8")
+
+readme = """تحديث إصلاح التحكم بالكرة - Football 3D
+
+المحتوى:
+- src/game.js فقط
+
+طريقة التركيب:
+1. فك ضغط الملف.
+2. افتح مستودع GitHub ثم مجلد src.
+3. افتح game.js واختر Edit (القلم).
+4. استبدل محتوى الملف كله بمحتوى game.js الموجود داخل مجلد src في هذا التحديث.
+5. اضغط Commit changes.
+
+لا تستبدل index.html أو style.css أو sw.js.
+"""
+(base / "طريقة_التركيب.txt").write_text(readme, encoding="utf-8")
+
+zip_path = Path("/mnt/data/football_ball_control_fixed.zip")
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+    z.write(base / "src" / "game.js", "src/game.js")
+    z.write(base / "طريقة_التركيب.txt", "طريقة_التركيب.txt")
+
+print(f"تم تجهيز الملف: {zip_path} | الحجم: {zip_path.stat().st_size} bytes")

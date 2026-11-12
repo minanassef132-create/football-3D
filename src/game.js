@@ -1,339 +1,350 @@
-const loading = document.querySelector('#loading');
+
+const loading = document.querySelector("#loading");
+
 function showError(error) {
   console.error(error);
-  loading.style.display = 'grid';
-  loading.textContent = 'تعذر تشغيل اللعبة: ' + (error?.message || String(error));
+  loading.textContent = "حصل خطأ في تشغيل الملعب: " + (error?.message || error);
+  loading.style.display = "grid";
 }
 
 async function startGame() {
   try {
-    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+    const THREE = await import(
+      "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    );
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87b9d8);
-    scene.fog = new THREE.Fog(0x87b9d8, 55, 115);
-    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, .1, 200);
-    camera.position.set(0, 19, 22);
+    scene.background = new THREE.Color(0x75b8e8);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    const camera = new THREE.PerspectiveCamera(
+      55, innerWidth / innerHeight, 0.1, 300
+    );
+    camera.position.set(0, 19, 25);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
     renderer.setSize(innerWidth, innerHeight);
-    renderer.shadowMap.enabled = false;
-    renderer.domElement.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:0';
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+    renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x31552a, 2));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x355533, 2));
     const sun = new THREE.DirectionalLight(0xffffff, 2);
     sun.position.set(-8, 20, 12);
+    sun.castShadow = true;
     scene.add(sun);
 
-    const mat = c => new THREE.MeshStandardMaterial({ color: c, roughness: .85 });
-    const white = mat(0xffffff), green = mat(0x16a34a), blue = mat(0x2563eb), black = mat(0x17202a);
-    const grass = new THREE.Mesh(new THREE.PlaneGeometry(34, 54), mat(0x187a36));
-    grass.rotation.x = -Math.PI / 2;
-    scene.add(grass);
+    // أرضية الملعب
+    const field = new THREE.Mesh(
+      new THREE.PlaneGeometry(34, 54),
+      new THREE.MeshStandardMaterial({ color: 0x238b42 })
+    );
+    field.rotation.x = -Math.PI / 2;
+    field.receiveShadow = true;
+    scene.add(field);
 
-    for (let z = -24; z < 27; z += 6) {
-      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(34, 6), mat(z % 12 ? 0x187a36 : 0x1c853c));
-      stripe.rotation.x = -Math.PI / 2;
-      stripe.position.set(0, .01, z);
-      scene.add(stripe);
+    // خطوط الملعب
+    function line(x1, z1, x2, z2, color = 0xffffff) {
+      const points = [
+        new THREE.Vector3(x1, 0.035, z1),
+        new THREE.Vector3(x2, 0.035, z2)
+      ];
+      const obj = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        new THREE.LineBasicMaterial({ color })
+      );
+      scene.add(obj);
     }
 
-    function fieldLine(x1, z1, x2, z2) {
-      const dx = x2 - x1, dz = z2 - z1;
-      const m = new THREE.Mesh(new THREE.BoxGeometry(.12, .025, Math.hypot(dx, dz)), white);
-      m.position.set((x1 + x2) / 2, .035, (z1 + z2) / 2);
-      m.rotation.y = Math.atan2(dx, dz);
-      scene.add(m);
-    }
-    fieldLine(-17,-27,17,-27); fieldLine(-17,27,17,27);
-    fieldLine(-17,-27,-17,27); fieldLine(17,-27,17,27); fieldLine(-17,0,17,0);
+    line(-17, -27, 17, -27);
+    line(-17, 27, 17, 27);
+    line(-17, -27, -17, 27);
+    line(17, -27, 17, 27);
+    line(-17, 0, 17, 0);
 
-    const circle = new THREE.Mesh(new THREE.RingGeometry(4.8, 4.95, 64), white);
+    const circle = new THREE.Mesh(
+      new THREE.RingGeometry(4.8, 4.95, 64),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    );
     circle.rotation.x = -Math.PI / 2;
-    circle.position.y = .04;
+    circle.position.y = 0.04;
     scene.add(circle);
 
-    function addBox(w,h,d,x,y,z,material) {
-      const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), material);
-      o.position.set(x,y,z);
-      scene.add(o);
-      return o;
+    // منطقتا الجزاء
+    function boxLine(x, z, w, h) {
+      line(x, z, x + w, z);
+      line(x + w, z, x + w, z + h);
+      line(x + w, z + h, x, z + h);
+      line(x, z + h, x, z);
     }
-    for (const z of [-26.2, 26.2]) {
-      addBox(7,2.5,.25,0,1.25,z,white);
-      addBox(.18,2.5,.18,-3.5,1.25,z,white);
-      addBox(.18,2.5,.18,3.5,1.25,z,white);
-      addBox(7,.18,.18,0,2.5,z,white);
-    }
+    boxLine(-9, -27, 18, 7);
+    boxLine(-9, 20, 18, 7);
 
-    function makePlayer(team, x, z, side) {
-      const g = new THREE.Group();
-      const shirt = new THREE.Mesh(new THREE.CylinderGeometry(.42,.5,.85,12), team);
-      shirt.position.y = 1.35;
-      g.add(shirt);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(.24,12,10), mat(0xd6a77a));
-      head.position.y = 2;
-      g.add(head);
-      for (const s of [-1,1]) {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(.18,.8,.2), black);
-        leg.position.set(s*.18,.45,0);
-        g.add(leg);
+    // المرمى
+    function goal(z) {
+      const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      for (const x of [-3.6, 3.6]) {
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.09, 0.09, 2.5, 8), material
+        );
+        post.position.set(x, 1.25, z);
+        scene.add(post);
       }
-      g.position.set(x,0,z);
-      g.userData.side = side;
-      g.userData.home = new THREE.Vector3(x,0,z);
-      scene.add(g);
-      return g;
+      const bar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 7.2, 8), material
+      );
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(0, 2.5, z);
+      scene.add(bar);
+    }
+    goal(-27);
+    goal(27);
+
+    // اللاعبين
+    function makePlayer(color, x, z) {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.48, 0.58, 1.25, 12),
+        new THREE.MeshStandardMaterial({ color })
+      );
+      body.position.y = 0.85;
+      body.castShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf1c49b })
+      );
+      head.position.y = 1.65;
+      group.add(head);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
     }
 
-    const players = [];
-    const teammates = [];
-    const opponents = [];
-    for (let i=0; i<5; i++) {
-      const mate = makePlayer(green,-8+i*4,8+Math.random()*7,'green');
-      const rival = makePlayer(blue,-8+i*4,-8-Math.random()*7,'blue');
-      players.push(mate,rival);
-      teammates.push(mate);
-      opponents.push(rival);
-    }
-    const user = makePlayer(green,0,12,'green');
-    players.push(user);
-    teammates.push(user);
+    const player = makePlayer(0x16b9ff, 0, 10);
+    const teammates = [
+      makePlayer(0x16b9ff, -7, 5),
+      makePlayer(0x16b9ff, 7, 3),
+      makePlayer(0x16b9ff, -5, -7),
+      makePlayer(0x16b9ff, 5, -12)
+    ];
+    const opponents = [
+      makePlayer(0xff4545, -6, -5),
+      makePlayer(0xff4545, 6, -4),
+      makePlayer(0xff4545, -3, -15),
+      makePlayer(0xff4545, 4, -20),
+      makePlayer(0xff4545, 0, -24)
+    ];
 
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(.38,20,16),white);
-    ball.position.set(0,.4,10.8);
+    // الكرة
+    const ball = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 20, 20),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    ball.position.set(0, 0.35, 9);
+    ball.castShadow = true;
     scene.add(ball);
 
-    const ballVel = new THREE.Vector3();
-    const move = new THREE.Vector2();
-    const forward = new THREE.Vector3(0,0,-1);
-    let paused=false, seconds=0, scoreA=0, scoreB=0, hasBall=true, kickLock=0;
-    let lastTouch = 'green';
-    const score = document.querySelector('#score');
-    const clock = document.querySelector('#clock');
+    const ballVelocity = new THREE.Vector3();
+    const direction = new THREE.Vector3(0, 0, -1);
+    let hasBall = true;
+    let kickLock = 0;
+    let paused = false;
+    let elapsed = 0;
 
-    function ballNear() {
-      return Math.hypot(ball.position.x-user.position.x,ball.position.z-user.position.z)<2.1;
+    const stickArea = document.querySelector("#stickArea");
+    const stick = document.querySelector("#stick");
+    let joyX = 0, joyY = 0, moving = false;
+
+    function joystick(e) {
+      const r = stickArea.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const max = 43;
+      const len = Math.hypot(dx, dy) || 1;
+      joyX = dx / Math.max(len, max) * Math.min(len, max) / max;
+      joyY = dy / Math.max(len, max) * Math.min(len, max) / max;
+      stick.style.left = (33 + joyX * 43) + "px";
+      stick.style.top = (33 + joyY * 43) + "px";
+      moving = true;
     }
+
+    stickArea.addEventListener("pointerdown", e => {
+      stickArea.setPointerCapture(e.pointerId);
+      joystick(e);
+    });
+    stickArea.addEventListener("pointermove", e => {
+      if (moving) joystick(e);
+    });
+    function stopJoy() {
+      moving = false;
+      joyX = joyY = 0;
+      stick.style.left = "33px";
+      stick.style.top = "33px";
+    }
+    stickArea.addEventListener("pointerup", stopJoy);
+    stickArea.addEventListener("pointercancel", stopJoy);
+
     function nearestTeammate() {
-      let best=null, bestScore=Infinity;
-      for (const p of teammates) {
-        if (p===user) continue;
-        const dx=p.position.x-user.position.x, dz=p.position.z-user.position.z;
-        const distance=Math.hypot(dx,dz);
-        const forwardProgress = -dz;
-        const anglePenalty = (dx*forward.x + dz*forward.z) < -1 ? 5 : 0;
-        const defenders = opponents.reduce((n,o)=>n+(Math.hypot(o.position.x-p.position.x,o.position.z-p.position.z)<2.2?1:0),0);
-        const value=distance + anglePenalty + defenders*3 - Math.max(-3,Math.min(3,forwardProgress))*.35;
-        if(value<bestScore){bestScore=value;best=p;}
-      }
-      return best;
+      return teammates
+        .map(p => ({
+          p,
+          score: p.position.distanceTo(player.position) +
+            Math.max(0, p.position.z - player.position.z) * 0.5
+        }))
+        .sort((a, b) => a.score - b.score)[0].p;
     }
 
-    function launchBall(target, power, lift=0.08) {
-      const start=new THREE.Vector3(user.position.x,user.position.y+.42,user.position.z);
-      const end=target.clone();
-      const dir=end.sub(start);
-      const distance=Math.max(1,dir.length());
-      dir.normalize();
-      ball.position.set(start.x+dir.x*.9,.42,start.z+dir.z*.9);
-      ballVel.set(dir.x*power, lift*power, dir.z*power);
-      hasBall=false;
-      kickLock=.48;
-      lastTouch='green';
+    function kick(target, power) {
+      if (!hasBall || kickLock > 0) return;
+      const start = player.position.clone();
+      start.y = 0.35;
+      ball.position.copy(start);
+      const dir = target.clone().sub(start).normalize();
+      ballVelocity.copy(dir.multiplyScalar(power));
+      ballVelocity.y = 1.5;
+      hasBall = false;
+      kickLock = 0.65;
     }
 
     function passBall() {
-      if(!hasBall && !ballNear()) return;
-      const mate=nearestTeammate();
-      if(!mate){shootBall();return;}
-      const target=new THREE.Vector3(mate.position.x,.4,mate.position.z);
-      launchBall(target, Math.min(1.35,Math.hypot(target.x-user.position.x,target.z-user.position.z)*.12+.65), .035);
+      const mate = nearestTeammate();
+      kick(mate.position.clone().add(new THREE.Vector3(0, 0, -0.5)), 17);
     }
 
     function throughBall() {
-      if(!hasBall && !ballNear()) return;
-      const mate=nearestTeammate();
-      let target;
-      if(mate) {
-        const runAhead=Math.max(3,Math.min(7,Math.hypot(mate.position.x-user.position.x,mate.position.z-user.position.z)*.55));
-        target=new THREE.Vector3(
-          THREE.MathUtils.clamp(mate.position.x+forward.x*runAhead,-14,14),
-          .4,
-          THREE.MathUtils.clamp(mate.position.z+forward.z*runAhead,-23,23)
-        );
-      } else {
-        target=new THREE.Vector3(user.position.x+forward.x*8,.4,user.position.z+forward.z*8);
-      }
-      launchBall(target,1.25,.055);
+      const mate = nearestTeammate();
+      const target = mate.position.clone();
+      target.z -= 7;
+      target.z = Math.max(-25, target.z);
+      kick(target, 20);
     }
 
     function shootBall() {
-      if(!hasBall && !ballNear()) return;
-      // Aim at the opponent goal, with a slight angle toward the center.
-      const goalX=THREE.MathUtils.clamp(-user.position.x*.22,-2.2,2.2);
-      const target=new THREE.Vector3(goalX,.4,-27);
-      const distance=Math.hypot(target.x-user.position.x,target.z-user.position.z);
-      launchBall(target,Math.max(1.55,Math.min(2.35,distance*.085)),.12);
+      const target = new THREE.Vector3(
+        player.position.x * -0.12, 0.5, -29
+      );
+      kick(target, 27);
     }
 
-    document.querySelector('#shoot').onclick=shootBall;
-    document.querySelector('#pass').onclick=passBall;
-    document.querySelector('#switch').onclick=()=>{
-      user.position.set((Math.random()-.5)*8,0,10);
-      hasBall=ballNear();
+    document.querySelector("#pass").onclick = passBall;
+    document.querySelector("#shoot").onclick = shootBall;
+
+    // زر البينية
+    const through = document.createElement("button");
+    through.textContent = "بينية";
+    through.style.background = "#ef8b16";
+    through.style.position = "fixed";
+    through.style.right = "20px";
+    through.style.bottom = "142px";
+    through.style.zIndex = "5";
+    document.body.appendChild(through);
+    through.onclick = throughBall;
+
+    document.querySelector("#pause").onclick = () => {
+      paused = !paused;
+      document.querySelector("#pause").textContent =
+        paused ? "استكمال" : "إيقاف";
     };
-    document.querySelector('#pause').onclick=e=>{
-      paused=!paused;
-      e.currentTarget.textContent=paused?'استكمال':'إيقاف';
+
+    document.querySelector("#switch").onclick = () => {
+      const mate = nearestTeammate();
+      const old = player.position.clone();
+      player.position.copy(mate.position);
+      mate.position.copy(old);
     };
 
-    // Add a dedicated through-ball button without editing index.html.
-    const throughBtn=document.createElement('button');
-    throughBtn.id='throughBall';
-    throughBtn.type='button';
-    throughBtn.textContent='بينية';
-    throughBtn.setAttribute('aria-label','تمريرة بينية');
-    throughBtn.style.cssText=[
-      'position:fixed','z-index:5','right:18px','bottom:142px',
-      'min-width:68px','height:54px','border:2px solid rgba(255,255,255,.9)',
-      'border-radius:16px','background:#f59e0b','color:#111827',
-      'font-weight:800','font-size:15px','box-shadow:0 3px 10px #0005',
-      'touch-action: manipulation'
-    ].join(';');
-    document.body.appendChild(throughBtn);
-    throughBtn.addEventListener('click',throughBall);
-
-    const area=document.querySelector('#stickArea');
-    const knob=document.querySelector('#stick');
-    let pointer=null;
-    area.addEventListener('pointerdown',e=>{
-      pointer=e.pointerId;
-      area.setPointerCapture(pointer);
-      setStick(e);
-    });
-    area.addEventListener('pointermove',e=>{if(e.pointerId===pointer)setStick(e);});
-    function setStick(e) {
-      const r=area.getBoundingClientRect();
-      const x=e.clientX-r.left-r.width/2, y=e.clientY-r.top-r.height/2;
-      const l=Math.hypot(x,y), k=Math.min(1,48/(l||1));
-      move.set(x*k/48,-y*k/48);
-      knob.style.left=(33+x*k)+'px';
-      knob.style.top=(33+y*k)+'px';
+    function clampPlayer(p) {
+      p.position.x = THREE.MathUtils.clamp(p.position.x, -15.5, 15.5);
+      p.position.z = THREE.MathUtils.clamp(p.position.z, -25.5, 25.5);
     }
-    function release() {
-      pointer=null;
-      move.set(0,0);
-      knob.style.left='33px';
-      knob.style.top='33px';
-    }
-    area.addEventListener('pointerup',release);
-    area.addEventListener('pointercancel',release);
 
-    addEventListener('keydown',e=>{
-      if(e.key==='ArrowLeft')move.x=-1;
-      if(e.key==='ArrowRight')move.x=1;
-      if(e.key==='ArrowUp')move.y=1;
-      if(e.key==='ArrowDown')move.y=-1;
-      if(e.key===' ')shootBall();
-      if(e.key.toLowerCase()==='x')passBall();
-      if(e.key.toLowerCase()==='c')throughBall();
-    });
-
-    let last=performance.now();
-    function animate(now) {
+    function animate() {
       requestAnimationFrame(animate);
-      const dt=Math.min((now-last)/1000,.04);
-      last=now;
+      if (!paused) {
+        const dt = Math.min(clock.getDelta(), 0.04);
+        elapsed += dt;
+        kickLock = Math.max(0, kickLock - dt);
 
-      if(!paused) {
-        seconds+=dt;
-        clock.textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(Math.floor(seconds%60)).padStart(2,'0');
-
-        const moving=move.length()>.08;
-        if(moving) {
-          const dir=new THREE.Vector3(move.x,0,-move.y).normalize();
-          forward.copy(dir);
-          user.rotation.y=Math.atan2(-dir.x,-dir.z);
-          user.position.x=THREE.MathUtils.clamp(user.position.x+dir.x*dt*7,-16,16);
-          user.position.z=THREE.MathUtils.clamp(user.position.z+dir.z*dt*7,-25,25);
+        if (moving) {
+          const speed = 9 * dt;
+          player.position.x += joyX * speed;
+          player.position.z += joyY * speed;
+          if (Math.abs(joyX) + Math.abs(joyY) > 0.1) {
+            direction.set(joyX, 0, joyY).normalize();
+          }
+          clampPlayer(player);
         }
 
-        kickLock=Math.max(0,kickLock-dt);
-
-        // Ball stays with the player only when actually controlled.
-        if(hasBall || (kickLock<=0 && ballNear() && ballVel.length()<.12)) {
-          hasBall=true;
-          ballVel.set(0,0,0);
-          const target=new THREE.Vector3(user.position.x+forward.x*.9,.4,user.position.z+forward.z*.9);
-          ball.position.lerp(target,moving?Math.min(1,dt*12):Math.min(1,dt*8));
+        if (hasBall) {
+          const target = player.position.clone()
+            .add(direction.clone().multiplyScalar(1.0));
+          target.y = 0.35;
+          ball.position.lerp(target, 0.25);
         } else {
-          ball.position.addScaledVector(ballVel,dt*60);
-          ballVel.y-=.018*dt*60;
-          ball.position.y+=ballVel.y*dt*60;
-          if(ball.position.y<.38){ball.position.y=.38;ballVel.y*=-.35;}
-          ballVel.multiplyScalar(Math.pow(.985,dt*60));
-          if(ballVel.length()<.025)ballVel.set(0,0,0);
-        }
-
-        // Teammates make supporting runs; opponents close down the ball.
-        for(const p of players) {
-          if(p===user) continue;
-          const isMate=p.userData.side==='green';
-          const dx=ball.position.x-p.position.x, dz=ball.position.z-p.position.z;
-          const d=Math.hypot(dx,dz);
-          if(!isMate && d>1.1 && d<11) {
-            p.position.x+=dx/d*dt*1.05;
-            p.position.z+=dz/d*dt*1.05;
-          } else if(isMate) {
-            const supportTarget=p.userData.home.clone();
-            if(hasBall) {
-              supportTarget.z-=1.8;
-              supportTarget.x+=forward.x*1.2;
-            }
-            const sx=supportTarget.x-p.position.x, sz=supportTarget.z-p.position.z;
-            const sd=Math.hypot(sx,sz);
-            if(sd>1.2) {
-              p.position.x+=sx/sd*dt*.7;
-              p.position.z+=sz/sd*dt*.7;
-            }
+          ball.position.addScaledVector(ballVelocity, dt);
+          ballVelocity.y -= 9.8 * dt;
+          if (ball.position.y < 0.35) {
+            ball.position.y = 0.35;
+            ballVelocity.y *= -0.35;
+            if (Math.abs(ballVelocity.y) < 0.5) ballVelocity.y = 0;
           }
-          if(d<.82 && !isMate && ballVel.length()>.1 && kickLock<=0) {
-            hasBall=false;
-            kickLock=.35;
+          ballVelocity.multiplyScalar(0.992);
+
+          if (kickLock <= 0 && ballVelocity.length() < 2.5 &&
+              ball.position.distanceTo(player.position) < 1.5) {
+            hasBall = true;
+            ballVelocity.set(0, 0, 0);
           }
         }
 
-        if(Math.abs(ball.position.x)>16)ballVel.x*=-.7;
-        if(Math.abs(ball.position.z)>26) {
-          if(Math.abs(ball.position.x)<3.5) {
-            if(ball.position.z<0)scoreA++;else scoreB++;
-            score.textContent='الأخضر '+scoreA+' - '+scoreB+' الأزرق';
-            ball.position.set(0,.4,0);
-            ballVel.set(0,0,0);
-            hasBall=false;
-            kickLock=0;
-          } else ballVel.z*=-.7;
+        // حركة مبسطة للفريق المنافس
+        for (const enemy of opponents) {
+          const d = ball.position.clone().sub(enemy.position);
+          d.y = 0;
+          if (d.length() > 1.5) {
+            enemy.position.add(d.normalize().multiplyScalar(2.0 * dt));
+          }
+          clampPlayer(enemy);
         }
+
+        // الكاميرا تتبع اللاعب
+        const camTarget = new THREE.Vector3(
+          player.position.x * 0.55,
+          19,
+          player.position.z + 17
+        );
+        camera.position.lerp(camTarget, 0.045);
+        camera.lookAt(player.position.x * 0.35, 0, player.position.z - 5);
+
+        const clockEl = document.querySelector("#clock");
+        const secs = Math.floor(elapsed);
+        clockEl.textContent =
+          String(Math.floor(secs / 60)).padStart(2, "0") + ":" +
+          String(secs % 60).padStart(2, "0");
       }
-
-      camera.position.lerp(new THREE.Vector3(user.position.x*.35,19,user.position.z+21),.06);
-      camera.lookAt(user.position.x*.35,0,user.position.z-3);
-      renderer.render(scene,camera);
-      if(loading.style.display!=='none')loading.style.display='none';
+      renderer.render(scene, camera);
     }
 
-    addEventListener('resize',()=>{
-      camera.aspect=innerWidth/innerHeight;
+    const clock = new THREE.Clock();
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth,innerHeight);
+      renderer.setSize(innerWidth, innerHeight);
     });
-    requestAnimationFrame(animate);
-  } catch(error) {
+
+    loading.style.display = "none";
+    animate();
+
+  } catch (error) {
     showError(error);
   }
 }
+
 startGame();
-      
+        
